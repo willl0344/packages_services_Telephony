@@ -34,6 +34,19 @@
             android:title="@string/vibrate_on_ring_title"
             android:persistent="false"
             android:defaultValue="false" />
+
+        <CheckBoxPreference
+            android:key="torch_pulse"
+            android:title="@string/torch_incoming_title"
+            android:persistent="false"
+            android:defaultValue="false" />
+
+        <SlimSeekBarPreference
+            android:key="torch_pulse_rate"
+            android:title="@string/torch_incoming_seekbar_title"
+            android:persistent="false"
+            android:dependency="torch_pulse" />
+
     </PreferenceCategory>
 
     <PreferenceCategory
@@ -83,6 +96,14 @@
         android:defaultValue="true" />
 
     <ListPreference
+        android:key="dialkey_padding"
+        android:title="@string/dialkey_padding_title"
+        android:dialogTitle="@string/dialkey_padding_dialog_title"
+        android:entries="@array/dialkey_padding_setting_entries"
+        android:entryValues="@array/dialkey_padding_setting_values"
+        android:persistent="false" />
+
+    <ListPreference
         android:key="flip_action"
         android:title="@string/flip_action_title"
         android:dialogTitle="@string/flip_action_dialog_title"
@@ -94,8 +115,23 @@
         android:key="bg_incall_screen"
         android:title="@string/bg_incall"
         android:persistent="false"
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:summary="@string/bg_incall_summary"/>
+
+    <CheckBoxPreference
+        android:key="bg_incall_screen_as_heads_up"
+        android:title="@string/bg_incall_as_heads_up"
+        android:persistent="false"
+        android:defaultValue="true"
+        android:dependency="bg_incall_screen"
+        android:summary="@string/bg_incall_as_heads_up_summary"/>
+
+    <CheckBoxPreference
+        android:key="incall_glowpad_transparency"
+        android:title="@string/glow_bg_trans"
+        android:persistent="false"
+        android:defaultValue="false"
+        android:summary="@string/glow_bg_trans_summary"/>
 
     <PreferenceScreen
         android:key="button_respond_via_sms_key"
@@ -111,14 +147,21 @@
     <PreferenceCategory
         android:title="@string/number_lookup" />
 
-    <SwitchPreference
+    <CheckBoxPreference
         android:key="switch_enable_forward_lookup"
         android:title="@string/enable_forward_lookup_title"
         android:summary="@string/enable_forward_lookup_summary"
         android:defaultValue="false"
         android:persistent="false" />
 
-    <SwitchPreference
+    <CheckBoxPreference
+        android:key="switch_enable_people_lookup"
+        android:title="@string/enable_people_lookup_title"
+        android:summary="@string/enable_people_lookup_summary"
+        android:defaultValue="false"
+        android:persistent="false" />
+
+    <CheckBoxPreference
         android:key="switch_enable_reverse_lookup"
         android:title="@string/enable_reverse_lookup_title"
         android:summary="@string/enable_reverse_lookup_summary"
@@ -132,11 +175,22 @@
         <ListPreference
             android:key="button_choose_forward_lookup_provider"
             android:title="@string/choose_forward_lookup_provider_title"
+            android:entries="@array/forward_lookup_provider_names"
+            android:entryValues="@array/forward_lookup_providers"
+            android:persistent="false" />
+
+        <ListPreference
+            android:key="button_choose_people_lookup_provider"
+            android:title="@string/choose_people_lookup_provider_title"
+            android:entries="@array/people_lookup_provider_names"
+            android:entryValues="@array/people_lookup_providers"
             android:persistent="false" />
 
         <ListPreference
             android:key="button_choose_reverse_lookup_provider"
             android:title="@string/choose_reverse_lookup_provider_title"
+            android:entries="@array/reverse_lookup_provider_names"
+            android:entryValues="@array/reverse_lookup_providers"
             android:persistent="false" />
     </PreferenceScreen>
 

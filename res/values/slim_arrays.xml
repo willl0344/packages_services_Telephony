@@ -16,6 +16,26 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
 
+    <!-- Values for dialpad key padding. -->
+    <string-array name="dialkey_padding_setting_values" translatable="false">
+        <item>0</item>
+        <item>5</item>
+        <item>10</item>
+        <item>15</item>
+        <item>20</item>
+        <item>25</item>
+    </string-array>
+
+    <!-- Entries listed in the setting for dialkey padding. -->
+    <string-array name="dialkey_padding_setting_entries">
+        <item>@string/entry_0dip</item>
+        <item>@string/entry_5dip</item>
+        <item>@string/entry_10dip</item>
+        <item>@string/entry_15dip</item>
+        <item>@string/entry_20dip</item>
+        <item>@string/entry_25dip</item>
+    </string-array>
+
     <!-- Values for the flip action settings. -->
     <string-array name="flip_action_setting_values" translatable="false">
         <item>0</item>
@@ -38,18 +58,25 @@
         <item>@string/summary_do_nothing</item>
     </string-array>
 
-    <string-array translatable="false" name="forward_lookup_providers">
+    <string-array name="forward_lookup_providers" translatable="false">
         <item>Google</item>
         <item>OpenStreetMap</item>
     </string-array>
 
-    <string-array translatable="true" name="forward_lookup_provider_names">
+    <string-array name="forward_lookup_provider_names" translatable="false">
         <item>Google</item>
         <item>OpenStreetMap</item>
     </string-array>
 
-    <string-array translatable="false" name="reverse_lookup_providers">
-        <item>Google</item>
+    <string-array name="people_lookup_providers" translatable="false">
+        <item>WhitePages</item>
+    </string-array>
+
+    <string-array name="people_lookup_provider_names" translatable="false">
+        <item>WhitePages (US)</item>
+    </string-array>
+
+    <string-array name="reverse_lookup_providers" translatable="false">
         <item>OpenCnam</item>
         <item>WhitePages</item>
         <item>WhitePages_CA</item>
@@ -58,8 +85,7 @@
         <item>ZabaSearch</item>
     </string-array>
 
-    <string-array translatable="true" name="reverse_lookup_provider_names">
-        <item>Google (Businesses)</item>
+    <string-array name="reverse_lookup_provider_names" translatable="false">
         <item>OpenCnam (US)</item>
         <item>WhitePages (US)</item>
         <item>WhitePages (CA)</item>
@@ -68,4 +94,29 @@
         <item>ZabaSearch (US)</item>
     </string-array>
 
+    <string-array name="preferred_network_mode_choices_slim" translatable="false">
+        <item>@string/preferred_network_mode_td_scdma_lte_cdma_evdo_gsm_wcdma</item>
+        <item>@string/preferred_network_mode_td_scdma_cdma_evdo_gsm_wcdma</item>
+        <item>@string/preferred_network_mode_td_scdma_gsm_wcdma_lte</item>
+        <item>@string/preferred_network_mode_td_scdma_wcdma_lte</item>
+        <item>@string/preferred_network_mode_td_scdma_gsm_wcdma</item>
+        <item>@string/preferred_network_mode_td_scdma_gsm_lte</item>
+        <item>@string/preferred_network_mode_td_scdma_gsm</item>
+        <item>@string/preferred_network_mode_td_scdma_lte</item>
+        <item>@string/preferred_network_mode_td_scdma_wcdma</item>
+        <item>@string/preferred_network_mode_td_scdma_only</item>
+        <item>@string/preferred_network_mode_lte_wcdma</item>
+        <item>@string/preferred_network_mode_lte</item>
+        <item>@string/preferred_network_mode_global</item>
+        <item>@string/preferred_network_mode_gsm_wcdma_lte</item>
+        <item>@string/preferred_network_mode_cdma_lte_evdo</item>
+        <item>@string/preferred_network_mode_cdma_evdo_gsm_wcdma</item>
+        <item>@string/preferred_network_mode_evdo_only</item>
+        <item>@string/preferred_network_mode_cdma_without_evdo</item>
+        <item>@string/preferred_network_mode_cdma_evdo_auto</item>
+        <item>@string/preferred_network_mode_gsm_wcdma_auto</item>
+        <item>@string/preferred_network_mode_wcdma_only</item>
+        <item>@string/preferred_network_mode_gsm_only</item>
+        <item>@string/preferred_network_mode_gsm_wcdma_preferred</item>
+    </string-array>
 </resources>

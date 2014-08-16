@@ -29,7 +29,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
@@ -51,7 +50,7 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
-import android.preference.SwitchPreference;
+import android.preference.SlimSeekBarPreference;
 import android.provider.ContactsContract.CommonDataKinds;
 import android.provider.MediaStore;
 import android.provider.Settings;
@@ -66,6 +65,7 @@ import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.ListAdapter;
 
+import com.android.internal.util.slim.DeviceUtils;
 import com.android.internal.telephony.CallForwardInfo;
 import com.android.internal.telephony.CommandsInterface;
 import com.android.internal.telephony.Phone;
@@ -74,8 +74,6 @@ import com.android.internal.telephony.cdma.TtyIntent;
 import com.android.internal.telephony.util.BlacklistUtils;
 import com.android.phone.sip.SipSharedPreferences;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -184,6 +182,8 @@ public class CallFeaturesSetting extends PreferenceActivity
 
     private static final String BUTTON_RINGTONE_KEY    = "button_ringtone_key";
     private static final String BUTTON_VIBRATE_ON_RING = "button_vibrate_on_ring";
+    private static final String KEY_TORCH_PULSE = "torch_pulse";
+    private static final String KEY_TORCH_PULSE_RATE = "torch_pulse_rate";
     private static final String BUTTON_PLAY_DTMF_TONE  = "button_play_dtmf_tone";
     private static final String BUTTON_DTMF_KEY        = "button_dtmf_settings";
     private static final String BUTTON_RETRY_KEY       = "button_auto_retry_key";
@@ -195,6 +195,11 @@ public class CallFeaturesSetting extends PreferenceActivity
     private static final String BUTTON_CDMA_OPTIONS = "button_cdma_more_expand_key";
 
     private static final String BUTTON_CALL_UI_IN_BACKGROUND = "bg_incall_screen";
+    private static final String BUTTON_CALL_UI_AS_HEADS_UP = "bg_incall_screen_as_heads_up";
+
+    private static final String INCALL_GLOWPAD_TRANSPARENCY = "incall_glowpad_transparency";
+
+    private static final String DIALKEY_PADDING = "dialkey_padding";
 
     private static final String VM_NUMBERS_SHARED_PREFERENCES_NAME = "vm_numbers";
 
@@ -209,10 +214,14 @@ public class CallFeaturesSetting extends PreferenceActivity
 
     private static final String SWITCH_ENABLE_FORWARD_LOOKUP =
             "switch_enable_forward_lookup";
+    private static final String SWITCH_ENABLE_PEOPLE_LOOKUP =
+            "switch_enable_people_lookup";
     private static final String SWITCH_ENABLE_REVERSE_LOOKUP =
             "switch_enable_reverse_lookup";
     private static final String BUTTON_CHOOSE_FORWARD_LOOKUP_PROVIDER =
             "button_choose_forward_lookup_provider";
+    private static final String BUTTON_CHOOSE_PEOPLE_LOOKUP_PROVIDER =
+            "button_choose_people_lookup_provider";
     private static final String BUTTON_CHOOSE_REVERSE_LOOKUP_PROVIDER =
             "button_choose_reverse_lookup_provider";
 
@@ -291,11 +300,16 @@ public class CallFeaturesSetting extends PreferenceActivity
 
     private Preference mRingtonePreference;
     private CheckBoxPreference mVibrateWhenRinging;
+    private CheckBoxPreference mPulseTorch;
+    private SlimSeekBarPreference mTorchRate;
     /** Whether dialpad plays DTMF tone or not. */
     private CheckBoxPreference mPlayDtmfTone;
     private CheckBoxPreference mButtonAutoRetry;
     private CheckBoxPreference mButtonHAC;
     private CheckBoxPreference mButtonCallUiInBackground;
+    private CheckBoxPreference mButtonCallUiAsHeadsUp;
+    private CheckBoxPreference mIncallGlowpadTransparency;
+    private ListPreference mDialkeyPadding;
     private ListPreference mButtonDTMF;
     private ListPreference mButtonTTY;
     private CheckBoxPreference mButtonNoiseSuppression;
@@ -308,9 +322,11 @@ public class CallFeaturesSetting extends PreferenceActivity
     private SipSharedPreferences mSipSharedPreferences;
     private PreferenceScreen mButtonBlacklist;
     private ListPreference mFlipAction;
-    private SwitchPreference mEnableForwardLookup;
-    private SwitchPreference mEnableReverseLookup;
+    private CheckBoxPreference mEnableForwardLookup;
+    private CheckBoxPreference mEnablePeopleLookup;
+    private CheckBoxPreference mEnableReverseLookup;
     private ListPreference mChooseForwardLookupProvider;
+    private ListPreference mChoosePeopleLookupProvider;
     private ListPreference mChooseReverseLookupProvider;
 
     private class VoiceMailProvider {
@@ -530,6 +546,8 @@ public class CallFeaturesSetting extends PreferenceActivity
             return true;
         } else if (preference == mButtonCallUiInBackground) {
             return true;
+        } else if (preference == mButtonCallUiAsHeadsUp) {
+            return true;
         } else if (preference == mButtonNoiseSuppression) {
             int nsp = mButtonNoiseSuppression.isChecked() ? 1 : 0;
             // Update Noise suppression value in Settings database
@@ -597,6 +615,16 @@ public class CallFeaturesSetting extends PreferenceActivity
             boolean doVibrate = (Boolean) objValue;
             Settings.System.putInt(mPhone.getContext().getContentResolver(),
                     Settings.System.VIBRATE_WHEN_RINGING, doVibrate ? 1 : 0);
+        } else if (preference == mPulseTorch) {
+            boolean doPulse = (Boolean) objValue;
+            Settings.System.putInt(mPhone.getContext().getContentResolver(),
+                    Settings.System.TORCH_WHILE_RINGING, doPulse ? 1 : 0);
+        } else if (preference == mTorchRate) {
+            String rate = (String) objValue;
+            Settings.System.putInt(mPhone.getContext().getContentResolver(),
+                    Settings.System.TORCH_WHILE_RINGING_PERIOD,
+                    Integer.parseInt(rate));
+            return true;
         } else if (preference == mButtonDTMF) {
             int index = mButtonDTMF.findIndexOfValue((String) objValue);
             Settings.System.putInt(mPhone.getContext().getContentResolver(),
@@ -607,6 +635,18 @@ public class CallFeaturesSetting extends PreferenceActivity
             Settings.System.putInt(mPhone.getContext().getContentResolver(),
                     Settings.System.CALL_UI_IN_BACKGROUND,
                     (Boolean) objValue ? 1 : 0);
+        } else if (preference == mButtonCallUiAsHeadsUp) {
+            Settings.System.putInt(mPhone.getContext().getContentResolver(),
+                    Settings.System.CALL_UI_AS_HEADS_UP,
+                    (Boolean) objValue ? 1 : 0);
+        } else if (preference == mIncallGlowpadTransparency) {
+            Settings.System.putInt(mPhone.getContext().getContentResolver(),
+                    Settings.System.INCALL_GLOWPAD_TRANSPARENCY,
+                    (Boolean) objValue ? 1 : 0);
+        } else if (preference == mDialkeyPadding) {
+            final int val = Integer.valueOf((String) objValue);
+            Settings.System.putInt(getContentResolver(),
+                Settings.System.DIALKEY_PADDING, val);
         } else if (preference == mMwiNotification) {
             int mwi_notification = mMwiNotification.isChecked() ? 1 : 0;
             Settings.System.putInt(mPhone.getContext().getContentResolver(),
@@ -652,11 +692,13 @@ public class CallFeaturesSetting extends PreferenceActivity
                 Settings.System.CALL_FLIP_ACTION_KEY, index);
             updateFlipActionSummary(index);
         } else if (preference == mEnableForwardLookup
+                || preference == mEnablePeopleLookup
                 || preference == mEnableReverseLookup) {
-            saveLookupProviderSwitches(preference, (Boolean) objValue);
+            saveLookupProviderSwitch(preference, (Boolean) objValue);
         } else if (preference == mChooseForwardLookupProvider
+                || preference == mChoosePeopleLookupProvider
                 || preference == mChooseReverseLookupProvider) {
-            saveLookupProviders(preference, (String) objValue);
+            saveLookupProviderSetting(preference, (String) objValue);
         }
         // always let the preference setting proceed.
         return true;
@@ -1591,6 +1633,8 @@ public class CallFeaturesSetting extends PreferenceActivity
 
         mRingtonePreference = findPreference(BUTTON_RINGTONE_KEY);
         mVibrateWhenRinging = (CheckBoxPreference) findPreference(BUTTON_VIBRATE_ON_RING);
+        mPulseTorch = (CheckBoxPreference) findPreference(KEY_TORCH_PULSE);
+        mTorchRate = (SlimSeekBarPreference) findPreference(KEY_TORCH_PULSE_RATE);
         mPlayDtmfTone = (CheckBoxPreference) findPreference(BUTTON_PLAY_DTMF_TONE);
         mMwiNotification = (CheckBoxPreference) findPreference(BUTTON_MWI_NOTIFICATION_KEY);
         if (mMwiNotification != null) {
@@ -1609,6 +1653,12 @@ public class CallFeaturesSetting extends PreferenceActivity
         mButtonTTY = (ListPreference) findPreference(BUTTON_TTY_KEY);
         mButtonCallUiInBackground =
                 (CheckBoxPreference) findPreference(BUTTON_CALL_UI_IN_BACKGROUND);
+        mButtonCallUiAsHeadsUp =
+                (CheckBoxPreference) findPreference(BUTTON_CALL_UI_AS_HEADS_UP);
+        mIncallGlowpadTransparency =
+                (CheckBoxPreference) findPreference(INCALL_GLOWPAD_TRANSPARENCY);
+        mDialkeyPadding =
+                (ListPreference) findPreference(DIALKEY_PADDING);
         mButtonNoiseSuppression = (CheckBoxPreference) findPreference(BUTTON_NOISE_SUPPRESSION_KEY);
         mVoicemailProviders = (ListPreference) findPreference(BUTTON_VOICEMAIL_PROVIDER_KEY);
         mButtonBlacklist = (PreferenceScreen) findPreference(BUTTON_BLACKLIST);
@@ -1631,6 +1681,32 @@ public class CallFeaturesSetting extends PreferenceActivity
             } else {
                 prefSet.removePreference(mVibrateWhenRinging);
                 mVibrateWhenRinging = null;
+            }
+        }
+
+        final boolean supportsTorch =
+                DeviceUtils.deviceSupportsTorch(mPhone.getContext());
+
+        if (mPulseTorch != null) {
+            if (supportsTorch) {
+                mPulseTorch.setOnPreferenceChangeListener(this);
+            } else {
+                prefSet.removePreference(mPulseTorch);
+                mPulseTorch = null;
+            }
+        }
+
+        if (mTorchRate != null) {
+            if (supportsTorch) {
+                mTorchRate.setDefault(500);
+                mTorchRate.isMilliseconds(true);
+                mTorchRate.setInterval(1);
+                mTorchRate.minimumValue(100);
+                mTorchRate.multiplyValue(25);
+                mTorchRate.setOnPreferenceChangeListener(this);
+            } else {
+                prefSet.removePreference(mTorchRate);
+                mTorchRate = null;
             }
         }
 
@@ -1682,6 +1758,18 @@ public class CallFeaturesSetting extends PreferenceActivity
             mButtonCallUiInBackground.setOnPreferenceChangeListener(this);
         }
 
+        if (mButtonCallUiAsHeadsUp!= null) {
+            mButtonCallUiAsHeadsUp.setOnPreferenceChangeListener(this);
+        }
+
+        if (mIncallGlowpadTransparency != null) {
+            mIncallGlowpadTransparency.setOnPreferenceChangeListener(this);
+        }
+
+        if (mDialkeyPadding != null) {
+            mDialkeyPadding.setOnPreferenceChangeListener(this);
+        }
+
         if (mFlipAction != null) {
             mFlipAction.setOnPreferenceChangeListener(this);
         }
@@ -1718,25 +1806,30 @@ public class CallFeaturesSetting extends PreferenceActivity
             }
         }
 
-        mEnableForwardLookup = (SwitchPreference)
+        mEnableForwardLookup = (CheckBoxPreference)
                 findPreference(SWITCH_ENABLE_FORWARD_LOOKUP);
-        mEnableReverseLookup = (SwitchPreference)
+        mEnablePeopleLookup = (CheckBoxPreference)
+                findPreference(SWITCH_ENABLE_PEOPLE_LOOKUP);
+        mEnableReverseLookup = (CheckBoxPreference)
                 findPreference(SWITCH_ENABLE_REVERSE_LOOKUP);
 
         mEnableForwardLookup.setOnPreferenceChangeListener(this);
+        mEnablePeopleLookup.setOnPreferenceChangeListener(this);
         mEnableReverseLookup.setOnPreferenceChangeListener(this);
 
         restoreLookupProviderSwitches();
 
         mChooseForwardLookupProvider = (ListPreference)
                 findPreference(BUTTON_CHOOSE_FORWARD_LOOKUP_PROVIDER);
+        mChoosePeopleLookupProvider = (ListPreference)
+                findPreference(BUTTON_CHOOSE_PEOPLE_LOOKUP_PROVIDER);
         mChooseReverseLookupProvider = (ListPreference)
                 findPreference(BUTTON_CHOOSE_REVERSE_LOOKUP_PROVIDER);
 
         mChooseForwardLookupProvider.setOnPreferenceChangeListener(this);
+        mChoosePeopleLookupProvider.setOnPreferenceChangeListener(this);
         mChooseReverseLookupProvider.setOnPreferenceChangeListener(this);
 
-        initLookupProviders();
         restoreLookupProviders();
 
         // create intent to bring up contact list
@@ -1902,6 +1995,19 @@ public class CallFeaturesSetting extends PreferenceActivity
             mVibrateWhenRinging.setChecked(getVibrateWhenRinging(this));
         }
 
+        if (mPulseTorch != null) {
+            final boolean pulse = Settings.System.getInt(
+                    getContentResolver(), Settings.System.TORCH_WHILE_RINGING, 0) == 1;
+            mPulseTorch.setChecked(pulse);
+        }
+
+        if (mTorchRate != null) {
+            final int rate = Settings.System.getInt(getContentResolver(),
+                    Settings.System.TORCH_WHILE_RINGING_PERIOD, 500);
+            // Minimum 100 is 4 intervals of the 25 multiplier
+            mTorchRate.setInitValue((rate / 25) - 4);
+        }
+
         if (mMwiNotification != null) {
             int mwi_notification = Settings.System.getInt(
                     getContentResolver(), Settings.System.ENABLE_MWI_NOTIFICATION, 0);
@@ -1935,8 +2041,26 @@ public class CallFeaturesSetting extends PreferenceActivity
 
         if (mButtonCallUiInBackground != null) {
             int callUiInBackground = Settings.System.getInt(getContentResolver(),
-                    Settings.System.CALL_UI_IN_BACKGROUND, 0);
+                    Settings.System.CALL_UI_IN_BACKGROUND, 1);
             mButtonCallUiInBackground.setChecked(callUiInBackground != 0);
+        }
+
+        if (mButtonCallUiAsHeadsUp != null) {
+            int callUiAsHeadsUp = Settings.System.getInt(getContentResolver(),
+                    Settings.System.CALL_UI_AS_HEADS_UP, 1);
+            mButtonCallUiAsHeadsUp.setChecked(callUiAsHeadsUp != 0);
+        }
+
+        if (mIncallGlowpadTransparency != null) {
+            int incallGlowpadTrans = Settings.System.getInt(getContentResolver(),
+                    Settings.System.INCALL_GLOWPAD_TRANSPARENCY, 0);
+            mIncallGlowpadTransparency.setChecked(incallGlowpadTrans != 0);
+        }
+
+        if (mDialkeyPadding != null) {
+            int dialkeyPadding = Settings.System.getInt(getContentResolver(),
+                    Settings.System.DIALKEY_PADDING, 0);
+            mDialkeyPadding.setValue(String.valueOf(dialkeyPadding));
         }
 
         if (mFlipAction != null) {
@@ -2110,59 +2234,22 @@ public class CallFeaturesSetting extends PreferenceActivity
         }
     }
 
-    private void saveLookupProviderSwitches(Preference pref, Boolean newValue) {
-        if (DBG) log("saveLookupProviderSwitches()");
+    private void saveLookupProviderSwitch(Preference pref, Boolean newValue) {
+        if (DBG) log("saveLookupProviderSwitch()");
+
+        String key;
 
         if (pref == mEnableForwardLookup) {
-            Settings.System.putInt(getContentResolver(),
-                    Settings.System.ENABLE_FORWARD_LOOKUP,
-                    newValue ? 1 : 0);
+            key = Settings.System.ENABLE_FORWARD_LOOKUP;
+        } else if (pref == mEnablePeopleLookup) {
+            key = Settings.System.ENABLE_PEOPLE_LOOKUP;
         } else if (pref == mEnableReverseLookup) {
-            Settings.System.putInt(getContentResolver(),
-                    Settings.System.ENABLE_REVERSE_LOOKUP,
-                    newValue ? 1 : 0);
-        }
-    }
-
-    private void initLookupProviders() {
-        if (DBG) log("initLookupProviders()");
-
-        String[] fEntries = getApplicationContext().getResources()
-                .getStringArray(R.array.forward_lookup_provider_names);
-        String[] fEntryValues = getApplicationContext().getResources()
-                .getStringArray(R.array.forward_lookup_providers);
-
-        String[] rEntries = getApplicationContext().getResources()
-                .getStringArray(R.array.reverse_lookup_provider_names);
-        String[] rEntryValues = getApplicationContext().getResources()
-                .getStringArray(R.array.reverse_lookup_providers);
-
-        if (!isGmsInstalled(getApplicationContext())) {
-            if (DBG) log("Google Play Services is NOT installed");
-
-            List<String> listRNames = new ArrayList<String>(
-                    Arrays.asList(rEntries));
-            List<String> listRValues = new ArrayList<String>(
-                    Arrays.asList(rEntryValues));
-
-            int index = listRValues.indexOf("Google");
-
-            if (index != -1) {
-                if (DBG) log("Removing Google from the reverse lookup providers");
-
-                listRNames.remove(index);
-                listRValues.remove(index);
-            }
-
-            rEntries = listRNames.toArray(new String[0]);
-            rEntryValues = listRValues.toArray(new String[0]);
+            key = Settings.System.ENABLE_REVERSE_LOOKUP;
+        } else {
+            return;
         }
 
-        mChooseReverseLookupProvider.setEntries(rEntries);
-        mChooseReverseLookupProvider.setEntryValues(rEntryValues);
-
-        mChooseForwardLookupProvider.setEntries(fEntries);
-        mChooseForwardLookupProvider.setEntryValues(fEntryValues);
+        Settings.System.putInt(getContentResolver(), key, newValue ? 1 : 0);
     }
 
     private void restoreLookupProviderSwitches() {
@@ -2170,65 +2257,52 @@ public class CallFeaturesSetting extends PreferenceActivity
 
         mEnableForwardLookup.setChecked(Settings.System.getInt(
                 getContentResolver(),
-                Settings.System.ENABLE_FORWARD_LOOKUP, 1) != 0 ? true : false);
+                Settings.System.ENABLE_FORWARD_LOOKUP, 1) != 0);
+        mEnablePeopleLookup.setChecked(Settings.System.getInt(
+                getContentResolver(),
+                Settings.System.ENABLE_PEOPLE_LOOKUP, 1) != 0);
         mEnableReverseLookup.setChecked(Settings.System.getInt(
                 getContentResolver(),
-                Settings.System.ENABLE_REVERSE_LOOKUP, 1) != 0 ? true : false);
+                Settings.System.ENABLE_REVERSE_LOOKUP, 1) != 0);
+    }
+
+    private void restoreLookupProvider(ListPreference pref, String key) {
+        String provider = Settings.System.getString(getContentResolver(), key);
+        if (provider == null) {
+            pref.setValueIndex(0);
+            saveLookupProviderSetting(pref, pref.getEntryValues()[0].toString());
+        } else {
+            pref.setValue(provider);
+        }
     }
 
     private void restoreLookupProviders() {
         if (DBG) log("restoreLookupProviders()");
 
-        String fProvider = Settings.System.getString(
-                getContentResolver(),
+        restoreLookupProvider(mChooseForwardLookupProvider,
                 Settings.System.FORWARD_LOOKUP_PROVIDER);
-
-        if (fProvider == null) {
-            mChooseForwardLookupProvider.setValueIndex(0);
-            saveLookupProviders(mChooseForwardLookupProvider,
-                    (String) mChooseForwardLookupProvider.getEntryValues()[0]);
-        } else {
-            mChooseForwardLookupProvider.setValue(fProvider);
-        }
-
-        String rProvider = Settings.System.getString(
-                getContentResolver(),
+        restoreLookupProvider(mChoosePeopleLookupProvider,
+                Settings.System.PEOPLE_LOOKUP_PROVIDER);
+        restoreLookupProvider(mChooseReverseLookupProvider,
                 Settings.System.REVERSE_LOOKUP_PROVIDER);
-
-        if (rProvider == null) {
-            mChooseReverseLookupProvider.setValueIndex(0);
-            saveLookupProviders(mChooseReverseLookupProvider,
-                    (String) mChooseReverseLookupProvider.getEntryValues()[0]);
-        } else {
-            mChooseReverseLookupProvider.setValue(rProvider);
-        }
     }
 
-    private void saveLookupProviders(Preference pref, String newValue) {
-        if (DBG) log("saveLookupProviders()");
+    private void saveLookupProviderSetting(Preference pref, String newValue) {
+        if (DBG) log("saveLookupProviderSetting()");
+
+        String key;
 
         if (pref == mChooseForwardLookupProvider) {
-            Settings.System.putString(
-                    getContentResolver(),
-                    Settings.System.FORWARD_LOOKUP_PROVIDER,
-                    newValue);
+            key = Settings.System.FORWARD_LOOKUP_PROVIDER;
+        } else if (pref == mChoosePeopleLookupProvider) {
+            key = Settings.System.PEOPLE_LOOKUP_PROVIDER;
         } else if (pref == mChooseReverseLookupProvider) {
-            Settings.System.putString(
-                    getContentResolver(),
-                    Settings.System.REVERSE_LOOKUP_PROVIDER,
-                    newValue);
+            key = Settings.System.REVERSE_LOOKUP_PROVIDER;
+        } else {
+            return;
         }
-    }
 
-    private static boolean isGmsInstalled(Context context) {
-        PackageManager pm = context.getPackageManager();
-        List<PackageInfo> packages = pm.getInstalledPackages(0);
-        for (PackageInfo info : packages) {
-            if (info.packageName.equals("com.google.android.gms")) {
-                return true;
-            }
-        }
-        return false;
+        Settings.System.putString(getContentResolver(), key, newValue);
     }
 
     /**
